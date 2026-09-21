@@ -9,7 +9,7 @@ import {
   Flame,
   Heart,
   Home,
-  MoreHorizontal,
+  LogOut,
   Pencil,
   Plus,
   Settings,
@@ -1902,10 +1902,11 @@ function App() {
 
             <button
               className="icon-button"
-              title="Sign out"
+              title="Log out"
               onClick={handleSignOut}
+              aria-label="Log out"
             >
-              <MoreHorizontal size={18} />
+              <LogOut size={18} />
             </button>
 
           </div>
@@ -4677,6 +4678,23 @@ function App() {
                 )
               )}
 
+            </div>
+
+            <div
+              style={{
+                marginTop: 18,
+                paddingTop: 18,
+                borderTop: "1px solid rgba(255,255,255,.08)",
+              }}
+            >
+              <button
+                className="cancel-button"
+                style={{ width: "100%", color: "#f87171" }}
+                onClick={handleSignOut}
+              >
+                <LogOut size={17} />
+                Log out of MacroTrack
+              </button>
             </div>
 
             <div className="modal-footer">

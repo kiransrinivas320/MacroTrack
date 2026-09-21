@@ -4617,14 +4617,47 @@ function App() {
 
               </div>
 
-              <button
-                className="close-modal"
-                onClick={() =>
-                  setShowSettingsModal(false)
-                }
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
               >
-                <X size={19} />
-              </button>
+                <button
+                  onClick={handleSignOut}
+                  title="Log out of MacroTrack"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "8px 11px",
+                    minHeight: 32,
+                    borderRadius: 9,
+                    border: "1px solid rgba(239,68,68,.30)",
+                    background: "rgba(239,68,68,.10)",
+                    color: "#f87171",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <LogOut size={15} />
+                  Log out
+                </button>
+
+                <button
+                  className="close-modal"
+                  onClick={() =>
+                    setShowSettingsModal(false)
+                  }
+                >
+                  <X size={19} />
+                </button>
+              </div>
 
             </div>
 
@@ -4678,23 +4711,6 @@ function App() {
                 )
               )}
 
-            </div>
-
-            <div
-              style={{
-                marginTop: 18,
-                paddingTop: 18,
-                borderTop: "1px solid rgba(255,255,255,.08)",
-              }}
-            >
-              <button
-                className="cancel-button"
-                style={{ width: "100%", color: "#f87171" }}
-                onClick={handleSignOut}
-              >
-                <LogOut size={17} />
-                Log out of MacroTrack
-              </button>
             </div>
 
             <div className="modal-footer">

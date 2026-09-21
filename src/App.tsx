@@ -1764,6 +1764,37 @@ function App() {
   return (
     <div className="app-shell">
 
+      <button
+        onClick={handleSignOut}
+        title="Log out of MacroTrack"
+        aria-label="Log out of MacroTrack"
+        style={{
+          position: "fixed",
+          top: 14,
+          right: 14,
+          zIndex: 9999,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
+          minHeight: 40,
+          padding: "0 13px",
+          borderRadius: 12,
+          border: "1px solid rgba(239,68,68,.32)",
+          background: "rgba(35,12,16,.96)",
+          color: "#f87171",
+          fontSize: 12,
+          fontWeight: 800,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <LogOut size={16} />
+        <span>Log out</span>
+      </button>
+
       <aside className="sidebar">
 
         <div className="brand">
@@ -4625,29 +4656,6 @@ function App() {
                   flexShrink: 0,
                 }}
               >
-                <button
-                  onClick={handleSignOut}
-                  title="Log out of MacroTrack"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    padding: "8px 11px",
-                    minHeight: 32,
-                    borderRadius: 9,
-                    border: "1px solid rgba(239,68,68,.30)",
-                    background: "rgba(239,68,68,.10)",
-                    color: "#f87171",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <LogOut size={15} />
-                  Log out
-                </button>
 
                 <button
                   className="close-modal"

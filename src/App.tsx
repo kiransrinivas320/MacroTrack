@@ -1,3 +1,4 @@
+import "./App.css";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import {
@@ -22,6 +23,15 @@ import {
   Target,
   Sparkles,
   ShieldCheck,
+  Activity,
+  Scale,
+  Dumbbell,
+  Search,
+  MessageCircle,
+  Send,
+  Calculator,
+  BookOpen,
+  Bot,
 } from "lucide-react";
 
 type FoodEntry = {
@@ -119,6 +129,247 @@ function createEmptyDay(date: string): DayData {
   };
 }
 
+
+type QueryForm = {
+  age: string;
+  sex: "male" | "female";
+  height: string;
+  weight: string;
+  gymDays: string;
+  activity: "sedentary" | "light" | "moderate" | "high" | "very_high";
+  goal: "lose" | "maintain" | "gain";
+};
+
+type QueryResult = {
+  bmi: number;
+  bmiStatus: string;
+  bmiTone: "good" | "warning" | "high";
+  bmr: number;
+  tdee: number;
+  calorieMin: number;
+  calorieMax: number;
+  proteinMin: number;
+  proteinMax: number;
+  proteinPerKgMin: number;
+  proteinPerKgMax: number;
+  fatMin: number;
+  fatMax: number;
+  fatShareMin: number;
+  fatShareMax: number;
+  carbsMin: number;
+  carbsMax: number;
+  fiberMin: number;
+  fiberMax: number;
+  hydrationMin: number;
+  hydrationMax: number;
+  activityLabel: string;
+};
+
+type HelperFood = {
+  name: string;
+  category: string;
+  basis: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+};
+
+const DEFAULT_QUERY_FORM: QueryForm = {
+  age: "20",
+  sex: "male",
+  height: "170",
+  weight: "75",
+  gymDays: "4",
+  activity: "moderate",
+  goal: "maintain",
+};
+
+const HELPER_FOODS: HelperFood[] = [
+  ["Chicken breast", "Protein", "100 g", 120, 22.5, 0, 2.6, 0],
+  ["Egg", "Protein", "100 g", 143, 12.6, 0.7, 9.5, 0],
+  ["Soya chunks", "Protein", "100 g", 345, 52, 33, 0.5, 13],
+  ["Tofu", "Protein", "100 g", 144, 17.3, 2.8, 8.7, 2.3],
+  ["Paneer", "Dairy", "100 g", 265, 18.3, 1.2, 20.8, 0],
+  ["Low-fat paneer", "Dairy", "100 g", 145, 23, 6, 4.5, 0],
+  ["Curd / plain yogurt", "Dairy", "100 g", 61, 3.5, 4.7, 3.3, 0],
+  ["Milk, low-fat", "Dairy", "100 g", 42, 3.4, 5, 1, 0],
+  ["Whey protein powder", "Supplement", "100 g", 400, 80, 8, 6, 0],
+  ["Oats", "Grains", "100 g", 389, 16.9, 66.3, 6.9, 10.6],
+  ["Rice, raw", "Grains", "100 g", 365, 7.1, 80, 0.7, 1.3],
+  ["Brown rice, raw", "Grains", "100 g", 370, 7.5, 77, 2.7, 3.5],
+  ["Wheat flour / atta", "Grains", "100 g", 340, 13.2, 72, 2.5, 10.7],
+  ["Whole wheat bread", "Grains", "100 g", 247, 13, 41, 4.2, 6],
+  ["Poha, dry", "Grains", "100 g", 350, 7, 76, 1, 2],
+  ["Quinoa, raw", "Grains", "100 g", 368, 14.1, 64.2, 6.1, 7],
+  ["Ragi flour", "Grains", "100 g", 336, 7.3, 72, 1.3, 11],
+  ["Sweet potato", "Vegetable", "100 g", 86, 1.6, 20.1, 0.1, 3],
+  ["Potato", "Vegetable", "100 g", 77, 2, 17.5, 0.1, 2.2],
+  ["Green peas", "Vegetable", "100 g", 81, 5.4, 14.5, 0.4, 5.1],
+  ["Broccoli", "Vegetable", "100 g", 34, 2.8, 6.6, 0.4, 2.6],
+  ["Spinach", "Vegetable", "100 g", 23, 2.9, 3.6, 0.4, 2.2],
+  ["Carrot", "Vegetable", "100 g", 41, 0.9, 9.6, 0.2, 2.8],
+  ["Tomato", "Vegetable", "100 g", 18, 0.9, 3.9, 0.2, 1.2],
+  ["Cucumber", "Vegetable", "100 g", 15, 0.7, 3.6, 0.1, 0.5],
+  ["Avocado", "Fruit", "100 g", 160, 2, 8.5, 14.7, 6.7],
+  ["Banana", "Fruit", "100 g", 89, 1.1, 22.8, 0.3, 2.6],
+  ["Apple", "Fruit", "100 g", 52, 0.3, 13.8, 0.2, 2.4],
+  ["Orange", "Fruit", "100 g", 47, 0.9, 11.8, 0.1, 2.4],
+  ["Mango", "Fruit", "100 g", 60, 0.8, 15, 0.4, 1.6],
+  ["Papaya", "Fruit", "100 g", 43, 0.5, 10.8, 0.3, 1.7],
+  ["Watermelon", "Fruit", "100 g", 30, 0.6, 7.6, 0.2, 0.4],
+  ["Pomegranate", "Fruit", "100 g", 83, 1.7, 18.7, 1.2, 4],
+  ["Guava", "Fruit", "100 g", 68, 2.6, 14.3, 1, 5.4],
+  ["Grapes", "Fruit", "100 g", 69, 0.7, 18.1, 0.2, 0.9],
+  ["Pineapple", "Fruit", "100 g", 50, 0.5, 13.1, 0.1, 1.4],
+  ["Almonds", "Nuts", "100 g", 579, 21.2, 21.6, 49.9, 12.5],
+  ["Cashews", "Nuts", "100 g", 553, 18.2, 30.2, 43.8, 3.3],
+  ["Peanuts", "Nuts", "100 g", 567, 25.8, 16.1, 49.2, 8.5],
+  ["Walnuts", "Nuts", "100 g", 654, 15.2, 13.7, 65.2, 6.7],
+  ["Chia seeds", "Seeds", "100 g", 486, 16.5, 42.1, 30.7, 34.4],
+  ["Flax seeds", "Seeds", "100 g", 534, 18.3, 28.9, 42.2, 27.3],
+  ["Pumpkin seeds", "Seeds", "100 g", 559, 30.2, 10.7, 49.1, 6],
+  ["Sprouted moong", "Legumes", "100 g", 30, 3, 6, 0.2, 1.8],
+  ["Moong dal, dry", "Legumes", "100 g", 347, 24, 63, 1.2, 16],
+  ["Chickpeas, dry", "Legumes", "100 g", 364, 19.3, 60.7, 6, 17.4],
+  ["Rajma, dry", "Legumes", "100 g", 333, 24, 60, 0.8, 24],
+  ["Masoor dal, dry", "Legumes", "100 g", 352, 24.6, 63.4, 1.1, 10.7],
+  ["Toor dal, dry", "Legumes", "100 g", 343, 22.3, 62.9, 1.7, 15.7],
+  ["Urad dal, dry", "Legumes", "100 g", 341, 24, 59.6, 1.4, 18.3],
+  ["Black beans, dry", "Legumes", "100 g", 341, 21.6, 62.4, 1.4, 15.5],
+  ["Kidney beans, cooked", "Legumes", "100 g", 127, 8.7, 22.8, 0.5, 6.4],
+  ["Lentils, cooked", "Legumes", "100 g", 116, 9, 20.1, 0.4, 7.9],
+  ["Greek yogurt, plain", "Dairy", "100 g", 59, 10.3, 3.6, 0.4, 0],
+  ["Milk, full-fat", "Dairy", "100 g", 61, 3.2, 4.8, 3.3, 0],
+  ["Buttermilk", "Dairy", "100 g", 40, 3.3, 4.8, 0.9, 0],
+  ["Soy milk, unsweetened", "Dairy alternative", "100 g", 33, 3.3, 0.7, 1.8, 0.6],
+  ["Chicken thigh", "Protein", "100 g", 177, 24.8, 0, 8.2, 0],
+  ["Salmon", "Protein", "100 g", 208, 20.4, 0, 13.4, 0],
+  ["Tuna, canned in water", "Protein", "100 g", 116, 25.5, 0, 0.8, 0],
+  ["Prawns / shrimp", "Protein", "100 g", 99, 24, 0.2, 0.3, 0],
+  ["Idli", "Indian staples", "100 g", 130, 4, 25, 0.7, 1],
+  ["Dosa", "Indian staples", "100 g", 168, 3.9, 27, 4, 1.3],
+  ["Chapati / roti", "Indian staples", "100 g", 297, 11, 52, 7.5, 11],
+  ["Makhana / fox nuts", "Snacks", "100 g", 347, 9.7, 76.9, 0.1, 7.6],
+  ["Popcorn, air-popped", "Snacks", "100 g", 387, 12.9, 77.8, 4.5, 14.5],
+  ["Peanut butter", "Nuts", "100 g", 588, 25.1, 20, 50, 6],
+  ["Dates", "Fruit", "100 g", 282, 2.5, 75, 0.4, 8],
+  ["Strawberries", "Fruit", "100 g", 32, 0.7, 7.7, 0.3, 2],
+  ["Blueberries", "Fruit", "100 g", 57, 0.7, 14.5, 0.3, 2.4],
+  ["Kiwi", "Fruit", "100 g", 61, 1.1, 14.7, 0.5, 3],
+  ["Pear", "Fruit", "100 g", 57, 0.4, 15.2, 0.1, 3.1],
+  ["Cauliflower", "Vegetable", "100 g", 25, 1.9, 5, 0.3, 2],
+  ["Capsicum", "Vegetable", "100 g", 31, 1, 6, 0.3, 2.1],
+  ["Green beans", "Vegetable", "100 g", 31, 1.8, 7, 0.2, 2.7],
+  ["Mushroom", "Vegetable", "100 g", 22, 3.1, 3.3, 0.3, 1],
+  ["Beetroot", "Vegetable", "100 g", 43, 1.6, 9.6, 0.2, 2.8],
+  ["Onion", "Vegetable", "100 g", 40, 1.1, 9.3, 0.1, 1.7],
+  ["Garlic", "Vegetable", "100 g", 149, 6.4, 33.1, 0.5, 2.1],
+  ["Lemon", "Fruit", "100 g", 29, 1.1, 9.3, 0.3, 2.8],
+  ["Ghee", "Fats", "100 g", 900, 0, 0, 100, 0],
+  ["Olive oil", "Fats", "100 g", 884, 0, 0, 100, 0],
+  ["Sunflower oil", "Fats", "100 g", 884, 0, 0, 100, 0],
+  ["Mustard oil", "Fats", "100 g", 884, 0, 0, 100, 0],
+  ["Coconut oil", "Fats", "100 g", 892, 0, 0, 100, 0],
+  ["Butter", "Fats", "100 g", 717, 0.9, 0.1, 81.1, 0],
+  ["Dark chocolate", "Treat", "100 g", 598, 7.8, 45.9, 42.6, 10.9],
+  ["Honey", "Sweetener", "100 g", 304, 0.3, 82.4, 0, 0.2],
+  ["Garam masala", "Spice", "10 g", 33, 1, 6, 1, 2],
+  ["Chicken masala", "Spice", "10 g", 30, 1, 5, 0.8, 1.5],
+  ["Chilli powder", "Spice", "10 g", 28, 1.1, 5.1, 1.2, 2.1],
+  ["Turmeric powder", "Spice", "10 g", 31, 1, 6.7, 0.3, 2.2],
+  ["Cumin powder", "Spice", "10 g", 38, 1.8, 4.4, 2.2, 1.1],
+  ["Coriander powder", "Spice", "10 g", 28, 1.2, 5.2, 1.3, 4.1],
+  ["Salt", "Seasoning", "10 g", 0, 0, 0, 0, 0],
+].map(([name, category, basis, calories, protein, carbs, fat, fiber]) => ({
+  name: name as string,
+  category: category as string,
+  basis: basis as string,
+  calories: calories as number,
+  protein: protein as number,
+  carbs: carbs as number,
+  fat: fat as number,
+  fiber: fiber as number,
+}));
+
+const ACTIVITY_META = {
+  // Conservative starting ranges. They are not prescriptions.
+  sedentary: { label: "Sedentary", multiplier: 1.2, protein: [1.0, 1.3], water: [28, 33] },
+  light: { label: "Lightly active", multiplier: 1.375, protein: [1.1, 1.4], water: [30, 35] },
+  moderate: { label: "Moderately active", multiplier: 1.55, protein: [1.3, 1.6], water: [32, 37] },
+  high: { label: "Very active", multiplier: 1.725, protein: [1.5, 1.8], water: [35, 40] },
+  very_high: { label: "Extremely active", multiplier: 1.9, protein: [1.6, 2.0], water: [38, 43] },
+} as const;
+
+function calculateQuery(form: QueryForm): QueryResult | null {
+  const age = Number(form.age);
+  const height = Number(form.height);
+  const weight = Number(form.weight);
+  if (!age || !height || !weight || age < 13 || age > 100 || height < 100 || weight < 25) return null;
+
+  const bmi = weight / Math.pow(height / 100, 2);
+  const bmiStatus = bmi < 18.5 ? "Underweight" : bmi < 25 ? "Healthy weight" : bmi < 30 ? "Overweight" : "Obesity range";
+  const bmiTone = bmi < 18.5 ? "warning" : bmi < 25 ? "good" : bmi < 30 ? "warning" : "high";
+  const bmr = 10 * weight + 6.25 * height - 5 * age + (form.sex === "male" ? 5 : -161);
+  const activity = ACTIVITY_META[form.activity];
+  const gymDays = Math.max(0, Math.min(14, Number(form.gymDays) || 0));
+  const gymAdjustment = gymDays >= 6 ? 0.03 : gymDays >= 3 ? 0.015 : 0;
+  const tdee = bmr * (activity.multiplier + gymAdjustment);
+  // Keep the calculator useful as a starting point rather than an aggressive prescription.
+  // Fat-loss uses a modest 10–15% calorie reduction; maintenance is centred on TDEE;
+  // weight gain uses a modest 5–10% surplus.
+  const goalFactor = form.goal === "lose" ? [0.85, 0.9] : form.goal === "gain" ? [1.05, 1.10] : [0.95, 1.05];
+  const calorieMin = Math.round((tdee * goalFactor[0]) / 10) * 10;
+  const calorieMax = Math.round((tdee * goalFactor[1]) / 10) * 10;
+
+  // Protein is scaled to activity and goal without pushing sedentary users unnecessarily high.
+  const goalProteinAdjustment = form.goal === "lose" ? 0.2 : 0;
+  const proteinMin = Math.round(weight * Math.min(2, activity.protein[0] + goalProteinAdjustment));
+  const proteinMax = Math.round(weight * Math.min(2, activity.protein[1] + goalProteinAdjustment));
+
+  // A practical fat range: 20–30% for fat loss, 25–35% otherwise.
+  const fatShareMin = form.goal === "lose" ? 20 : 25;
+  const fatShareMax = form.goal === "lose" ? 30 : 35;
+  const fatMin = Math.round((calorieMin * (fatShareMin / 100)) / 9);
+  const fatMax = Math.round((calorieMax * (fatShareMax / 100)) / 9);
+
+  // Carbs are the remaining energy after the protein/fat ranges, so the numbers stay internally coherent.
+  const carbMin = Math.max(0, Math.round((calorieMin - proteinMax * 4 - fatMax * 9) / 4));
+  const carbMax = Math.max(carbMin, Math.round((calorieMax - proteinMin * 4 - fatMin * 9) / 4));
+  const fiberMin = Math.max(20, Math.round((calorieMin / 1000) * 14));
+  const fiberMax = Math.max(fiberMin, Math.round((calorieMax / 1000) * 14));
+
+  // Hydration is a simple body-weight baseline adjusted modestly by activity. Training, heat and illness can increase needs.
+  const hydrationMin = Math.round((weight * activity.water[0]) / 50) * 50;
+  const hydrationMax = Math.round((weight * activity.water[1]) / 50) * 50;
+
+  return {
+    bmi: Math.round(bmi * 10) / 10,
+    bmiStatus,
+    bmiTone,
+    bmr: Math.round(bmr),
+    tdee: Math.round(tdee),
+    calorieMin,
+    calorieMax,
+    proteinMin,
+    proteinMax,
+    proteinPerKgMin: activity.protein[0],
+    proteinPerKgMax: activity.protein[1],
+    fatMin,
+    fatMax,
+    fatShareMin,
+    fatShareMax,
+    carbsMin: carbMin,
+    carbsMax: carbMax,
+    fiberMin,
+    fiberMax,
+    hydrationMin,
+    hydrationMax,
+    activityLabel: activity.label,
+  };
+}
+
 function App() {
   const todayKey = getDateKey(new Date());
 
@@ -202,6 +453,33 @@ function App() {
 
   const [ownerSearch, setOwnerSearch] =
     useState("");
+
+
+  const [queryForm, setQueryForm] =
+    useState<QueryForm>(DEFAULT_QUERY_FORM);
+
+  const [queryResult, setQueryResult] =
+    useState<QueryResult | null>(null);
+
+  const [helperSearch, setHelperSearch] =
+    useState("");
+
+  const [babuOpen, setBabuOpen] =
+    useState(false);
+
+  const [babuInput, setBabuInput] =
+    useState("");
+
+  const [babuBusy, setBabuBusy] =
+    useState(false);
+
+  const [babuMessages, setBabuMessages] =
+    useState<{ role: "user" | "assistant"; content: string }[]>([
+      {
+        role: "assistant",
+        content: "Hey, I'm BABU. Ask me anything — tech, study, travel, fitness, coding, general questions, or just something you're curious about.",
+      },
+    ]);
 
   const currentDay =
     days[selectedDate] ||
@@ -1152,6 +1430,160 @@ function App() {
     }
   }
 
+
+  function updateQueryForm<K extends keyof QueryForm>(field: K, value: QueryForm[K]) {
+    setQueryForm((previous) => ({ ...previous, [field]: value }));
+  }
+
+  function runQuery() {
+    setQueryResult(calculateQuery(queryForm));
+  }
+
+  async function useQueryGoals() {
+    if (!queryResult || !user) return;
+    const nextGoals: Goals = {
+      calories: Math.round((queryResult.calorieMin + queryResult.calorieMax) / 2),
+      protein: Math.round((queryResult.proteinMin + queryResult.proteinMax) / 2),
+      carbs: Math.round((queryResult.carbsMin + queryResult.carbsMax) / 2),
+      fat: Math.round((queryResult.fatMin + queryResult.fatMax) / 2),
+      fiber: Math.round((queryResult.fiberMin + queryResult.fiberMax) / 2),
+      budget: goals.budget,
+    };
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          calorie_goal: nextGoals.calories,
+          protein_goal: nextGoals.protein,
+          carbs_goal: nextGoals.carbs,
+          fat_goal: nextGoals.fat,
+          fiber_goal: nextGoals.fiber,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+      setGoals(nextGoals);
+      setSettingsForm(nextGoals);
+      alert("Query recommendations saved as your daily goals. Your food entries were not changed.");
+    } catch (error: any) {
+      alert(error?.message || "Could not save these goals.");
+    }
+  }
+
+  function normalizeSearchText(value: string) {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9\\s]/g, " ")
+      .replace(/\\s+/g, " ")
+      .trim();
+  }
+
+  function levenshteinDistance(a: string, b: string) {
+    const rows = a.length + 1;
+    const cols = b.length + 1;
+    const matrix = Array.from({ length: rows }, () =>
+      Array<number>(cols).fill(0)
+    );
+
+    for (let i = 0; i < rows; i += 1) matrix[i][0] = i;
+    for (let j = 0; j < cols; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i < rows; i += 1) {
+      for (let j = 1; j < cols; j += 1) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+
+    return matrix[rows - 1][cols - 1];
+  }
+
+  function helperFoodScore(food: HelperFood, query: string) {
+    const name = normalizeSearchText(food.name);
+    const category = normalizeSearchText(food.category);
+    if (!query) return 0;
+    if (name.includes(query)) return 0;
+    if (category.includes(query)) return 1;
+
+    const queryWords = query.split(" ");
+    const nameWords = name.split(" ");
+    let score = 8;
+
+    for (const queryWord of queryWords) {
+      if (!queryWord) continue;
+      let wordScore = 8;
+
+      for (const nameWord of nameWords) {
+        if (nameWord.startsWith(queryWord) || queryWord.startsWith(nameWord)) {
+          wordScore = Math.min(wordScore, 1);
+        } else {
+          wordScore = Math.min(wordScore, levenshteinDistance(queryWord, nameWord));
+        }
+      }
+
+      score = Math.min(score, wordScore);
+    }
+
+    return score;
+  }
+
+  const filteredHelperFoods = useMemo(() => {
+    const q = normalizeSearchText(helperSearch);
+    if (!q) return HELPER_FOODS;
+
+    const maxDistance = q.length <= 4 ? 1 : q.length <= 7 ? 2 : 3;
+
+    return HELPER_FOODS
+      .map((food) => ({
+        food,
+        score: helperFoodScore(food, q),
+      }))
+      .filter(({ food, score }) => {
+        const haystack = normalizeSearchText(`${food.name} ${food.category}`);
+        return haystack.includes(q) || score <= maxDistance;
+      })
+      .sort((a, b) => a.score - b.score || a.food.name.localeCompare(b.food.name))
+      .map(({ food }) => food);
+  }, [helperSearch]);
+
+  async function askBabu() {
+    const message = babuInput.trim();
+    if (!message || babuBusy) return;
+    const nextMessages = [...babuMessages, { role: "user" as const, content: message }];
+    setBabuMessages(nextMessages);
+    setBabuInput("");
+    setBabuBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("babu", {
+        body: {
+          message,
+          history: babuMessages.slice(-9),
+        },
+      });
+      if (error) throw error;
+      setBabuMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          content: data?.reply || "I couldn't get an answer right now. Try again.",
+        },
+      ]);
+    } catch (error: any) {
+      setBabuMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          content: error?.message || "BABU is temporarily unavailable. Please try again.",
+        },
+      ]);
+    } finally {
+      setBabuBusy(false);
+    }
+  }
+
   async function loadOwnerData() {
     if (!user || !profile?.is_admin) return;
 
@@ -1762,7 +2194,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell app-${activeTab}`}>
 
       <button
         onClick={handleSignOut}
@@ -1874,6 +2306,46 @@ function App() {
           >
             <Trophy size={19} />
             <span>Achievements</span>
+          </button>
+
+
+          <button
+            className={`nav-item ${
+              activeTab === "query"
+                ? "active"
+                : ""
+            }`}
+            onClick={() => setActiveTab("query")}
+          >
+            <Activity size={19} />
+            <span>Query</span>
+          </button>
+
+          <button
+            className={`nav-item ${
+              activeTab === "helper"
+                ? "active"
+                : ""
+            }`}
+            onClick={() => setActiveTab("helper")}
+          >
+            <BookOpen size={19} />
+            <span>Helper</span>
+          </button>
+
+          <button
+            className={`nav-item ${
+              activeTab === "babu"
+                ? "active"
+                : ""
+            }`}
+            onClick={() => {
+              setActiveTab("babu");
+              setBabuOpen(false);
+            }}
+          >
+            <Sparkles size={19} />
+            <span>BABU AI</span>
           </button>
 
           {profile?.is_admin && (
@@ -4395,7 +4867,246 @@ function App() {
 
         )}
 
-      </main>
+
+        {activeTab === "query" && (
+          <section className="full-page-section macro-query-page">
+            <div className="page-heading query-page-heading">
+              <div>
+                <span className="eyebrow">PERSONAL NUTRITION LAB</span>
+                <h2>Query & Nutrition Planner</h2>
+                <p>Use your details to get practical ranges. Nothing is saved as a target unless you choose it.</p>
+              </div>
+              <button className="today-button query-calculate-button" onClick={runQuery}>
+                <Calculator size={16} /> Calculate everything
+              </button>
+            </div>
+
+            <div className="query-howto-strip">
+              <div><span className="step-number">1</span><div><strong>Enter your basics</strong><small>Height, weight, age and activity</small></div></div>
+              <div><span className="step-number">2</span><div><strong>Run the calculator</strong><small>BMI, calories and macro ranges</small></div></div>
+              <div><span className="step-number">3</span><div><strong>Choose your targets</strong><small>Your existing goals stay yours</small></div></div>
+            </div>
+
+            <div className="query-grid">
+              <div className="query-card query-bmi-card">
+                <div className="query-card-heading">
+                  <div className="query-icon query-icon-orange"><Scale size={21} /></div>
+                  <div>
+                    <span className="eyebrow">01 • BODY MASS INDEX</span>
+                    <h3>BMI check</h3>
+                    <p className="query-card-subtitle">A quick screening number based on height and weight.</p>
+                  </div>
+                </div>
+                <div className="query-form-grid compact">
+                  <label><span>Height <em>cm</em></span><input type="number" min="100" value={queryForm.height} onChange={(e) => updateQueryForm("height", e.target.value)} /></label>
+                  <label><span>Weight <em>kg</em></span><input type="number" min="25" value={queryForm.weight} onChange={(e) => updateQueryForm("weight", e.target.value)} /></label>
+                </div>
+                <button className="query-primary query-primary-orange" onClick={runQuery}><Scale size={16} /> Calculate BMI</button>
+                {queryResult && (
+                  <div className={`bmi-result ${queryResult.bmiTone}`}>
+                    <div>
+                      <span className="eyebrow">YOUR BMI</span>
+                      <strong>{queryResult.bmi}</strong>
+                    </div>
+                    <div className="bmi-status">
+                      <span>●</span>
+                      <b>{queryResult.bmiStatus}</b>
+                    </div>
+                  </div>
+                )}
+                <div className="query-warning compact-warning">
+                  <strong>⚠ For convenience only.</strong>
+                  <span>BMI is a screening estimate, not a diagnosis, and can misclassify muscular or differently built people.</span>
+                </div>
+              </div>
+
+              <div className="query-card query-profile-card">
+                <div className="query-card-heading">
+                  <div className="query-icon query-icon-blue"><Dumbbell size={21} /></div>
+                  <div>
+                    <span className="eyebrow">02 • PERSONAL PROFILE</span>
+                    <h3>Tell MacroTrack about you</h3>
+                    <p className="query-card-subtitle">These answers power the calorie and macro estimate.</p>
+                  </div>
+                </div>
+                <div className="query-form-grid">
+                  <label><span>Age <em>years</em></span><input type="number" min="13" max="100" value={queryForm.age} onChange={(e) => updateQueryForm("age", e.target.value)} /></label>
+                  <label><span>Sex used for calorie formula</span><select value={queryForm.sex} onChange={(e) => updateQueryForm("sex", e.target.value as QueryForm["sex"])}><option value="male">Male</option><option value="female">Female</option></select></label>
+                  <label><span>Gym / training days <em>per week</em></span><input type="number" min="0" max="14" value={queryForm.gymDays} onChange={(e) => updateQueryForm("gymDays", e.target.value)} /></label>
+                  <label><span>Primary goal</span><select value={queryForm.goal} onChange={(e) => updateQueryForm("goal", e.target.value as QueryForm["goal"])}><option value="lose">Lose fat / weight</option><option value="maintain">Maintain</option><option value="gain">Gain weight / muscle</option></select></label>
+                  <label className="full-field"><span>Overall activity level</span><select value={queryForm.activity} onChange={(e) => updateQueryForm("activity", e.target.value as QueryForm["activity"])}><option value="sedentary">Sedentary — mostly sitting, little exercise</option><option value="light">Light — exercise 1–3 days/week</option><option value="moderate">Moderate — exercise 3–5 days/week</option><option value="high">High — hard exercise 6–7 days/week</option><option value="very_high">Extremely high — hard training + active job/lifestyle</option></select></label>
+                </div>
+                <button className="query-primary query-primary-blue" onClick={runQuery}><Calculator size={16} /> Generate my ranges</button>
+              </div>
+            </div>
+
+            {queryResult && (
+              <div className="query-results-section">
+                <div className="query-result-hero">
+                  <div>
+                    <span className="eyebrow">03 • YOUR RESULTS</span>
+                    <h3>{queryResult.activityLabel} • {queryForm.goal === "lose" ? "fat-loss" : queryForm.goal === "gain" ? "muscle / weight-gain" : "maintenance"} range</h3>
+                    <p>BMR ≈ {queryResult.bmr} kcal/day <span>•</span> Estimated maintenance ≈ {queryResult.tdee} kcal/day</p>
+                  </div>
+                  <button className="query-primary query-primary-green" onClick={useQueryGoals}><Target size={16} /> Use these as my daily goals</button>
+                </div>
+
+                <div className="recommendation-grid">
+                  <div className="recommendation-card rec-orange"><span>CALORIES</span><strong>{queryResult.calorieMin}–{queryResult.calorieMax}</strong><small>kcal/day</small></div>
+                  <div className="recommendation-card rec-blue"><span>PROTEIN</span><strong>{queryResult.proteinMin}–{queryResult.proteinMax}g</strong><small>{queryResult.proteinPerKgMin}–{queryResult.proteinPerKgMax} g/kg body weight</small></div>
+                  <div className="recommendation-card rec-teal"><span>CARBS</span><strong>{queryResult.carbsMin}–{queryResult.carbsMax}g</strong><small>estimated after protein + fat</small></div>
+                  <div className="recommendation-card rec-pink"><span>HEALTHY FATS</span><strong>{queryResult.fatMin}–{queryResult.fatMax}g</strong><small>roughly {queryResult.fatShareMin}–{queryResult.fatShareMax}% of energy</small></div>
+                  <div className="recommendation-card rec-green"><span>FIBER</span><strong>{queryResult.fiberMin}–{queryResult.fiberMax}g</strong><small>around 14g per 1,000 kcal</small></div>
+                  <div className="recommendation-card rec-yellow"><span>HYDRATION GUIDE</span><strong>{queryResult.hydrationMin}–{queryResult.hydrationMax} ml</strong><small>baseline daily guide; more may be needed with heat/training</small></div>
+                </div>
+
+                <div className="query-insight-grid">
+                  <div className="query-insight-card">
+                    <div className="insight-icon"><Activity size={17} /></div>
+                    <div><strong>Training snapshot</strong><p>{queryForm.gymDays || 0} training days/week • {queryResult.activityLabel}</p></div>
+                  </div>
+                  <div className="query-insight-card">
+                    <div className="insight-icon"><Settings size={17} /></div>
+                    <div><strong>Your targets stay under your control</strong><p>These are suggestions. Edit any target in Settings whenever you want.</p></div>
+                  </div>
+                </div>
+
+                <div className="query-method-note">
+                  <strong>How MacroTrack estimates this:</strong> Mifflin–St Jeor for BMR, an activity multiplier for maintenance calories, a goal-based calorie range, protein based on body weight/activity, fat at a practical 20–30% of energy for fat loss or 25–35% otherwise, and fiber around 14g per 1,000 kcal. Hydration is a simple body-weight/activity guide.
+                </div>
+                <div className="query-disclaimer"><strong>Small but important:</strong> These numbers are estimates for convenience, not medical or dietetic prescriptions. Actual needs can differ with body composition, health, medications, training, climate and other factors.</div>
+              </div>
+            )}
+
+            {!queryResult && (
+              <div className="query-empty-state">
+                <div className="empty-orb"><Calculator size={28} /></div>
+                <h3>Your results will appear here</h3>
+                <p>Fill in the two cards above, then press <strong>Calculate everything</strong>. You’ll see BMI, calorie, protein, carb, fat, fiber and hydration guidance in one place.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "helper" && (
+          <section className="full-page-section helper-page">
+            <div className="page-heading helper-page-heading">
+              <div>
+                <span className="eyebrow">FOOD REFERENCE</span>
+                <h2>Helper</h2>
+                <p>Search common foods and get quick reference values per listed basis.</p>
+              </div>
+              <div className="helper-count-badge"><BookOpen size={15} /> {filteredHelperFoods.length} foods</div>
+            </div>
+
+            <div className="helper-search-card">
+              <div className="helper-search-icon"><Search size={19} /></div>
+              <div className="helper-search-field">
+                <label htmlFor="helper-food-search">Search food</label>
+                <input id="helper-food-search" value={helperSearch} onChange={(e) => setHelperSearch(e.target.value)} placeholder="Try chicken, paneer, rice, banan..." autoComplete="off" />
+                <small>Not case-sensitive • small spelling mistakes are matched to the nearest food</small>
+              </div>
+              {helperSearch && <button className="helper-clear-button" onClick={() => setHelperSearch("")}><X size={16} /> Clear</button>}
+            </div>
+
+            {helperSearch && filteredHelperFoods.length > 0 && (
+              <div className="helper-match">
+                <span>Closest match</span>
+                <strong>{filteredHelperFoods[0].name}</strong>
+                <small>Showing the nearest matching foods below.</small>
+              </div>
+            )}
+
+            <div className="helper-note">
+              <strong>Reference only:</strong> Values can vary by brand, variety and preparation. Use the package label when precision matters. MacroTrack keeps chicken as a generic reference instead of splitting it into cooked/uncooked entries.
+            </div>
+
+            <div className="helper-table-wrap">
+              <table className="helper-table">
+                <thead><tr><th>Food</th><th>Category</th><th>Basis</th><th>kcal</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Fiber</th></tr></thead>
+                <tbody>
+                  {filteredHelperFoods.map((food) => (
+                    <tr key={`${food.name}-${food.basis}`}>
+                      <td><strong>{food.name}</strong></td>
+                      <td><span className="helper-category">{food.category}</span></td>
+                      <td>{food.basis}</td>
+                      <td className="helper-number">{food.calories}</td>
+                      <td className="helper-number">{food.protein}g</td>
+                      <td className="helper-number">{food.carbs}g</td>
+                      <td className="helper-number">{food.fat}g</td>
+                      <td className="helper-number">{food.fiber}g</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredHelperFoods.length === 0 && <div className="helper-empty"><Search size={22} /><strong>No close match found</strong><span>Try a shorter spelling, such as “chick”, “paneer” or “rice”.</span></div>}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "babu" && (
+          <section className="full-page-section babu-page">
+            <div className="page-heading babu-page-heading">
+              <div>
+                <span className="eyebrow">YOUR GENERAL AI ASSISTANT</span>
+                <h2>Meet BABU</h2>
+                <p>Ask anything — coding, studies, planning, fitness, travel, technology and everyday questions.</p>
+              </div>
+              <div className="babu-status-pill"><span /> Online assistant</div>
+            </div>
+
+            <div className="babu-workspace">
+              <div className="babu-workspace-header">
+                <div className="babu-avatar babu-avatar-large"><Bot size={27} /></div>
+                <div>
+                  <strong>BABU</strong>
+                  <span>General-purpose AI assistant</span>
+                </div>
+                <div className="babu-header-tip"><MessageCircle size={15} /> Your question → answer appears below</div>
+              </div>
+
+              <div className="babu-chat-body">
+                {babuMessages.map((message, index) => (
+                  <div key={index} className={`babu-message ${message.role}`}>
+                    <div className="babu-message-label">{message.role === "user" ? "You" : "BABU"}</div>
+                    <div className="babu-message-content">{message.content}</div>
+                  </div>
+                ))}
+                {babuBusy && (
+                  <div className="babu-message assistant">
+                    <div className="babu-message-label">BABU</div>
+                    <div className="babu-thinking"><span /><span /><span /> Thinking…</div>
+                  </div>
+                )}
+              </div>
+
+              {babuMessages.length <= 1 && (
+                <div className="babu-quick-prompts">
+                  <span>Try one:</span>
+                  {[
+                    "Explain pointers in C simply",
+                    "Plan a 4-day gym routine",
+                    "Help me debug my Java code",
+                    "Explain something I am studying",
+                  ].map((prompt) => (
+                    <button key={prompt} onClick={() => setBabuInput(prompt)}>{prompt}</button>
+                  ))}
+                </div>
+              )}
+
+              <form className="babu-composer" onSubmit={(e) => { e.preventDefault(); askBabu(); }}>
+                <div className="babu-composer-label"><span>Message BABU</span><small>Press Enter to send</small></div>
+                <div className="babu-input-shell">
+                  <input autoFocus value={babuInput} onChange={(e) => setBabuInput(e.target.value)} placeholder="Type your question here..." aria-label="Message BABU" />
+                  <button type="submit" disabled={babuBusy || !babuInput.trim()} aria-label="Send to BABU"><Send size={18} /></button>
+                </div>
+                <div className="babu-disclaimer">BABU may be wrong. For medical, legal or financial decisions, verify important information.</div>
+              </form>
+            </div>
+          </section>
+        )}
+
+              </main>
 
       {showFoodModal && (
 
@@ -4623,7 +5334,7 @@ function App() {
         >
 
           <div
-            className="food-modal"
+            className="food-modal settings-modal"
             onMouseDown={(event) =>
               event.stopPropagation()
             }
@@ -4714,6 +5425,23 @@ function App() {
 
                     </div>
 
+                    {queryResult && field !== "budget" && (
+                      <small className="goal-range-hint">
+                        Suggested:{" "}
+                        {field === "calories" &&
+                          `${queryResult.calorieMin}–${queryResult.calorieMax} kcal/day`}
+                        {field === "protein" &&
+                          `${queryResult.proteinMin}–${queryResult.proteinMax} g/day • ${queryResult.proteinPerKgMin}–${queryResult.proteinPerKgMax} g/kg`}
+                        {field === "carbs" &&
+                          `${queryResult.carbsMin}–${queryResult.carbsMax} g/day`}
+                        {field === "fat" &&
+                          `${queryResult.fatMin}–${queryResult.fatMax} g/day`}
+                        {field === "fiber" &&
+                          `${queryResult.fiberMin}–${queryResult.fiberMax} g/day`}
+                      </small>
+                    )}
+
+
                   </div>
 
                 )
@@ -4749,6 +5477,37 @@ function App() {
 
         </div>
 
+      )}
+
+
+      {babuOpen && activeTab !== "babu" && (
+        <div className="babu-panel">
+          <div className="babu-panel-header">
+            <div className="babu-panel-title"><div className="babu-mini-avatar"><Bot size={17} /></div><div><strong>BABU</strong><span>General AI assistant</span></div></div>
+            <button className="babu-close" onClick={() => setBabuOpen(false)}><X size={18} /></button>
+          </div>
+          <div className="babu-messages">
+            {babuMessages.map((message, index) => (
+              <div key={index} className={`babu-message ${message.role}`}>
+                <div className="babu-message-label">{message.role === "user" ? "You" : "BABU"}</div>
+                <div className="babu-message-content">{message.content}</div>
+              </div>
+            ))}
+            {babuBusy && <div className="babu-message assistant"><div className="babu-message-label">BABU</div><div className="babu-thinking"><span /><span /><span /> Thinking…</div></div>}
+          </div>
+          <form className="babu-input-row" onSubmit={(e) => { e.preventDefault(); askBabu(); }}>
+            <input autoFocus value={babuInput} onChange={(e) => setBabuInput(e.target.value)} placeholder="Type your question here..." aria-label="Message BABU" />
+            <button type="submit" disabled={babuBusy || !babuInput.trim()} aria-label="Send to BABU"><Send size={17} /></button>
+          </form>
+          <div className="babu-disclaimer">BABU may be wrong. Verify important high-stakes information.</div>
+        </div>
+      )}
+
+      {!babuOpen && activeTab !== "babu" && (
+        <button className="babu-floating-button" onClick={() => setBabuOpen(true)} aria-label="Open BABU">
+          <Sparkles size={17} />
+          <span>Ask BABU</span>
+        </button>
       )}
 
     </div>
